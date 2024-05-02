@@ -69,6 +69,7 @@ struct JetFinderTask {
   Configurable<float> jetEtaMax{"jetEtaMax", 99.0, "maximum jet pseudorapidity"};
   Configurable<int> jetAlgorithm{"jetAlgorithm", 2, "jet clustering algorithm. 0 = kT, 1 = C/A, 2 = Anti-kT"};
   Configurable<int> jetRecombScheme{"jetRecombScheme", 0, "jet recombination scheme. 0 = E-scheme, 1 = pT-scheme, 2 = pT2-scheme"};
+  Configurable<int> jetAltRecombScheme{"jetAltRecombScheme", 7, "alternative recombination scheme. default 7 = WTA-scheme"};
   Configurable<float> jetGhostArea{"jetGhostArea", 0.005, "jet ghost area"};
   Configurable<int> ghostRepeat{"ghostRepeat", 1, "set to 0 to gain speed if you dont need area calculation"};
   Configurable<bool> DoTriggering{"DoTriggering", false, "used for the charged jet trigger to remove the eta constraint on the jet axis"};
@@ -99,6 +100,9 @@ struct JetFinderTask {
     }
     jetFinder.algorithm = static_cast<fastjet::JetAlgorithm>(static_cast<int>(jetAlgorithm));
     jetFinder.recombScheme = static_cast<fastjet::RecombinationScheme>(static_cast<int>(jetRecombScheme));
+    if (doprocessChargedAltJets || doprocessParticleLevelChargedAltJets) {
+      jetFinder.recombScheme = static_cast<fastjet::RecombinationScheme>(static_cast<int>(jetAltRecombScheme));
+    }
     jetFinder.ghostArea = jetGhostArea;
     jetFinder.ghostRepeatN = ghostRepeat;
     if (DoTriggering) {
@@ -212,4 +216,26 @@ struct JetFinderTask {
   }
 
   PROCESS_SWITCH(JetFinderTask, processParticleLevelFullJets, "Particle level full jet finding", false);
+
+  void processChargedAltJets(soa::Filtered<JetCollisions>::iterator const& collision,
+                          soa::Filtered<JetTracks> const& tracks)
+  {
+    if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
+      return;
+    }
+    inputParticles.clear();
+    jetfindingutilities::analyseTracks<soa::Filtered<JetTracks>, soa::Filtered<JetTracks>::iterator>(inputParticles, tracks, trackSelection);
+    jetfindingutilities::findJets(jetFinder, inputParticles, jetPtMin, jetPtMax, jetRadius, jetAreaFractionMin, collision, jetsTable, constituentsTable, registry.get<THn>(HIST("hJet")), fillTHnSparse);
+  }
+
+  PROCESS_SWITCH(JetFinderTask, processChargedAltJets, "Data and reco level jet finding for charged jets with an alternative recomb scheme", false);
+
+  void processParticleLevelChargedAltJets(JetMcCollision const& collision, soa::Filtered<JetParticles> const& particles)
+  {
+    // TODO: MC event selection?
+    inputParticles.clear();
+    jetfindingutilities::analyseParticles<soa::Filtered<JetParticles>, soa::Filtered<JetParticles>::iterator>(inputParticles, particleSelection, 1, particles, pdgDatabase);
+    jetfindingutilities::findJets(jetFinder, inputParticles, jetPtMin, jetPtMax, jetRadius, jetAreaFractionMin, collision, jetsTable, constituentsTable, registry.get<THn>(HIST("hJetMCP")), fillTHnSparse);
+  }
+  PROCESS_SWITCH(JetFinderTask, processParticleLevelChargedAltJets, "Particle level charged jet finding with alternative recomb scheme", false);
 };

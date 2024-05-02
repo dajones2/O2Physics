@@ -58,6 +58,7 @@ struct hJetAnalysis {
   Configurable<float> pt_TTsig_max{"pt_TTsig_max", 50, "signal maximum trigger track pt"};
   Configurable<float> frac_sig{"frac_sig", 0.5, "fraction of events to use for signal"};
   Configurable<float> jetR{"jetR", 0.4, "jet resolution parameter"};
+  Configurable<float> matchingFrac{"matchingFrac", 0.5, "fraction for matching algorithm for WTA jets"};
 
   TRandom3* rand = new TRandom3(0);
 
@@ -89,7 +90,11 @@ struct hJetAnalysis {
                               {"hJetPhi", "jet #phi;#phi_{jet};entries", {HistType::kTH1F, {{160, -1.0, 7.0}}}},
                               {"hPtPart", "Particle p_{T};p_{T};entries", {HistType::kTH1F, {{200, 0, 200}}}},
                               {"hEtaPart", "Particle #eta;#eta;entries", {HistType::kTH1F, {{100, -1.0, 1.0}}}},
-                              {"hPhiPart", "Particle #phi;#phi;entries", {HistType::kTH1F, {{160, -1.0, 7.0}}}}}};
+                              {"hPhiPart", "Particle #phi;#phi;entries", {HistType::kTH1F, {{160, -1.0, 7.0}}}},
+                              {"hDeltaR", "#DeltaR;#DeltaR;#frac{dN_{jets}}{d#DeltaR}", {HistType::kTH1F, {{50, 0.0, 0.15}}}},
+                              {"hDeltaRPart", "Particle #DeltaR;#DeltaR;#frac{1}{N_{jets}}#frac{dN_{jets}}{d#DeltaR}", {HistType::kTH1F, {{50, 0.0, 0.15}}}},
+                              {"hDeltaRpT", "jet p_{T} vs #DeltaR;p_{T,jet};#DeltaR", {HistType::kTH2F, {{200, 0, 200}, {50, 0.0, 0.15}}}},
+                              {"hDeltaRpTPart", "Particle jet p_{T} vs #DeltaR;p_{T,jet};#DeltaR", {HistType::kTH2F, {{200, 0, 200}, {50, 0.0, 0.15}}}}}};
 
   int eventSelection = -1;
   int trackSelection = -1;
@@ -114,8 +119,8 @@ struct hJetAnalysis {
     return dPhi;
   }
 
-  template <typename T, typename U>
-  void fillHistograms(T const& jets, U const& tracks)
+  template <typename T, typename U, typename W>
+  void fillHistograms(T const& jets, U const& tracks, W const& jetsWTA)
   {
     bool is_sig_col;
     std::vector<double> phi_TT_ar;
@@ -166,6 +171,20 @@ struct hJetAnalysis {
       registry.fill(HIST("hJetPt"), jet.pt());
       registry.fill(HIST("hJetEta"), jet.eta());
       registry.fill(HIST("hJetPhi"), jet.phi());
+      double deltaR = -1;
+      for (auto& jetWTA : jetsWTA) {
+        double dPhi = jetWTA.phi() - jet.phi();
+        double dEta = jetWTA.eta() - jet.eta();
+        double dR = sqrt(pow(dPhi,2) + pow(dEta,2));
+        if (dR < matchingFrac * jetR) {
+          deltaR = dR;
+          break;
+        }
+      }
+      if (deltaR != -1) {
+        registry.fill(HIST("hDeltaR"), deltaR);
+        registry.fill(HIST("hDeltaRpT"), jet.pt(), deltaR);
+      }
       if (n_TT > 0) {
         float dphi = dPhi(jet.phi(), phi_TT);
         if (is_sig_col) {
@@ -283,21 +302,21 @@ struct hJetAnalysis {
     }
   }
 
-  void processData(soa::Filtered<JetCollisions>::iterator const& collision, soa::Filtered<soa::Join<aod::ChargedJets, aod::ChargedJetConstituents>> const& jets, soa::Filtered<JetTracks> const& tracks)
+  void processData(soa::Filtered<JetCollisions>::iterator const& collision, soa::Filtered<soa::Join<aod::ChargedJets, aod::ChargedJetConstituents>> const& jets, soa::Filtered<soa::Join<aod::ChargedAltJets, aod::ChargedAltJetConstituents>> const& jetsWTA, soa::Filtered<JetTracks> const& tracks)
   {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
       return;
     }
-    fillHistograms(jets, tracks);
+    fillHistograms(jets, tracks, jetsWTA);
   }
   PROCESS_SWITCH(hJetAnalysis, processData, "process data", true);
 
-  void processMCD(soa::Filtered<JetCollisions>::iterator const& collision, soa::Filtered<soa::Join<aod::ChargedMCDetectorLevelJets, aod::ChargedMCDetectorLevelJetConstituents>> const& jets, soa::Filtered<JetTracks> const& tracks)
+  void processMCD(soa::Filtered<JetCollisions>::iterator const& collision, soa::Filtered<soa::Join<aod::ChargedMCDetectorLevelJets, aod::ChargedMCDetectorLevelJetConstituents>> const& jets, soa::Filtered<soa::Join<aod::ChargedAltMCDetectorLevelJets, aod::ChargedAltMCDetectorLevelJetConstituents>> const& jetsWTA, soa::Filtered<JetTracks> const& tracks)
   {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
       return;
     }
-    fillHistograms(jets, tracks);
+    fillHistograms(jets, tracks, jetsWTA);
   }
   PROCESS_SWITCH(hJetAnalysis, processMCD, "process MC detector level", false);
 
