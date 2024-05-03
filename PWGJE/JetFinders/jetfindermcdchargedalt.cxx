@@ -23,7 +23,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 
   tasks.emplace_back(
     adaptAnalysisTask<JetFinderMCDetectorLevelChargedAlt>(cfgc,
-                                                       SetDefaultProcesses{{{"processChargedAltJets", true}}}, TaskName{"jet-finder-mcd-charged-alt"}));
+                                                          SetDefaultProcesses{{{"processChargedAltJets", true}}}, TaskName{"jet-finder-mcd-charged-alt"}));
 
   return WorkflowSpec{tasks};
 }

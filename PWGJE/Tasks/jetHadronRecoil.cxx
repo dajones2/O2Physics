@@ -175,7 +175,7 @@ struct hJetAnalysis {
       for (auto& jetWTA : jetsWTA) {
         double dPhi = jetWTA.phi() - jet.phi();
         double dEta = jetWTA.eta() - jet.eta();
-        double dR = sqrt(pow(dPhi,2) + pow(dEta,2));
+        double dR = sqrt(pow(dPhi, 2) + pow(dEta, 2));
         if (dR < matchingFrac * jetR) {
           deltaR = dR;
           break;

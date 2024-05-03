@@ -218,7 +218,7 @@ struct JetFinderTask {
   PROCESS_SWITCH(JetFinderTask, processParticleLevelFullJets, "Particle level full jet finding", false);
 
   void processChargedAltJets(soa::Filtered<JetCollisions>::iterator const& collision,
-                          soa::Filtered<JetTracks> const& tracks)
+                             soa::Filtered<JetTracks> const& tracks)
   {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
       return;
