@@ -62,6 +62,7 @@ struct hJetAnalysis {
   Configurable<float> pTHatExponent{"pTHatExponent", 6.0, "exponent of the event weight for the calculation of pTHat"};
   Configurable<float> pTHatMaxMCD{"pTHatMaxMCD", 999.0, "maximum fraction of hard scattering for jet acceptance in detector MC"};
   Configurable<float> pTHatMaxMCP{"pTHatMaxMCP", 999.0, "maximum fraction of hard scattering for jet acceptance in particle MC"};
+  Configurable<std::string> triggerMasks{"triggerMasks", "", "possible JE Trigger masks: fJetChLowPt,fJetChHighPt,fTrackLowPt,fTrackHighPt,fJetD0ChLowPt,fJetD0ChHighPt,fJetLcChLowPt,fJetLcChHighPt,fEMCALReadout,fJetFullHighPt,fJetFullLowPt,fJetNeutralHighPt,fJetNeutralLowPt,fGammaVeryHighPtEMCAL,fGammaVeryHighPtDCAL,fGammaHighPtEMCAL,fGammaHighPtDCAL,fGammaLowPtEMCAL,fGammaLowPtDCAL,fGammaVeryLowPtEMCAL,fGammaVeryLowPtDCAL"};
 
   Preslice<soa::Join<aod::Charged1MCParticleLevelJets, aod::Charged1MCParticleLevelJetConstituents>> PartJetsPerCollision = aod::jet::mcCollisionId;
 
@@ -130,6 +131,7 @@ struct hJetAnalysis {
   {
     eventSelection = jetderiveddatautilities::initialiseEventSelection(static_cast<std::string>(eventSelections));
     trackSelection = jetderiveddatautilities::initialiseTrackSelection(static_cast<std::string>(trackSelections));
+    triggerMaskBits = jetderiveddatautilities::initialiseTriggerMaskBits(triggerMasks);
 
     Filter jetCuts = aod::jet::r == nround(jetR.node() * 100.0f);
     Filter trackCuts = (aod::jtrack::pt >= trackPtMin && aod::jtrack::pt < trackPtMax && aod::jtrack::eta > trackEtaMin && aod::jtrack::eta < trackEtaMax);
@@ -430,6 +432,9 @@ struct hJetAnalysis {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
       return;
     }
+    if (!jetderiveddatautilities::selectTrigger(collision, triggerMaskBits)) {
+      return;
+    }
     registry.fill(HIST("hZvtxSelected"), collision.posZ());
     fillHistograms(jets, jetsWTA, tracks);
   }
@@ -441,6 +446,9 @@ struct hJetAnalysis {
                   soa::Filtered<JetTracks> const& tracks)
   {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
+      return;
+    }
+    if (!jetderiveddatautilities::selectTrigger(collision, triggerMaskBits)) {
       return;
     }
     registry.fill(HIST("hZvtxSelected"), collision.posZ());
@@ -455,6 +463,9 @@ struct hJetAnalysis {
                           soa::Filtered<JetTracks> const& tracks)
   {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
+      return;
+    }
+    if (!jetderiveddatautilities::selectTrigger(collision, triggerMaskBits)) {
       return;
     }
     registry.fill(HIST("hZvtxSelected"), collision.posZ(), collision.mcCollision().weight());
@@ -500,6 +511,9 @@ struct hJetAnalysis {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
       return;
     }
+    if (!jetderiveddatautilities::selectTrigger(collision, triggerMaskBits)) {
+      return;
+    }
     registry.fill(HIST("hZvtxSelected"), collision.posZ());
     const auto& mcpjetsWTACut = mcpjetsWTA.sliceBy(PartJetsPerCollision, collision.mcCollisionId());
     for (const auto& mcdjet : mcdjets) {
@@ -520,6 +534,9 @@ struct hJetAnalysis {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
       return;
     }
+    if (!jetderiveddatautilities::selectTrigger(collision, triggerMaskBits)) {
+      return;
+    }
     registry.fill(HIST("hZvtxSelected"), collision.posZ());
     const auto& mcpjetsWTACut = mcpjetsWTA.sliceBy(PartJetsPerCollision, collision.mcCollisionId());
     for (const auto& mcdjet : mcdjets) {
@@ -538,6 +555,9 @@ struct hJetAnalysis {
                                       soa::Filtered<soa::Join<aod::ChargedMCParticleLevelJets, aod::ChargedMCParticleLevelJetConstituents, aod::ChargedMCParticleLevelJetsMatchedToChargedMCDetectorLevelJets>> const& mcpjets)
   {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
+      return;
+    }
+    if (!jetderiveddatautilities::selectTrigger(collision, triggerMaskBits)) {
       return;
     }
     registry.fill(HIST("hZvtxSelected"), collision.posZ());
@@ -567,6 +587,9 @@ struct hJetAnalysis {
                                               soa::Filtered<soa::Join<aod::ChargedMCParticleLevelJets, aod::ChargedMCParticleLevelJetConstituents, aod::ChargedMCParticleLevelJetsMatchedToChargedMCDetectorLevelJets, aod::ChargedMCParticleLevelJetEventWeights>> const& mcpjets)
   {
     if (!jetderiveddatautilities::selectCollision(collision, eventSelection)) {
+      return;
+    }
+    if (!jetderiveddatautilities::selectTrigger(collision, triggerMaskBits)) {
       return;
     }
     registry.fill(HIST("hZvtxSelected"), collision.posZ());
