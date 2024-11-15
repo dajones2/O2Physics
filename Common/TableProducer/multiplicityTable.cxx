@@ -86,7 +86,7 @@ struct MultiplicityTable {
   Produces<aod::FDDMultZeqs> tableFDDZeqs;      // 11
   Produces<aod::PVMultZeqs> tablePVZeqs;        // 12
   Produces<aod::MultMCExtras> tableExtraMc;     // 13
-  Produces<aod::MC2Mults> tableExtraMc2Mults;
+  Produces<aod::Mult2MCExtras> tableExtraMult2MCExtras;
   Produces<aod::MultsGlobal> multsGlobal;       // Not accounted for, produced based on process function processGlobalTrackingCounters
 
   // For vertex-Z corrections in calibration
@@ -167,7 +167,6 @@ struct MultiplicityTable {
     if (tEnabled[kMultMCExtras]) {
       if (enabledTables->get(tableNames[kMultMCExtras].c_str(), "Enable") == -1) {
         doprocessMC.value = true;
-        doprocessMC2Mults.value = true;
         LOG(info) << "Enabling MC processing due to " << tableNames[kMultMCExtras] << " table being enabled.";
       }
     }
@@ -380,15 +379,17 @@ struct MultiplicityTable {
         if (bc.runNumber() != mRunNumber) {
           mRunNumber = bc.runNumber(); // mark this run as at least tried
           if (ccdbConfig.reconstructionPass.value == "") {
-            lCalibObjects = ccdb->getForTimeStamp<TList>(ccdbConfig.ccdbPath, bc.timestamp());
+            lCalibObjects = ccdb->getForRun<TList>(ccdbConfig.ccdbPath, mRunNumber);
           } else if (ccdbConfig.reconstructionPass.value == "metadata") {
             std::map<std::string, std::string> metadata;
             metadata["RecoPassName"] = metadataInfo.get("RecoPassName");
-            lCalibObjects = ccdb->getSpecific<TList>(ccdbConfig.ccdbPath, bc.timestamp(), metadata);
+            LOGF(info, "Loading CCDB for reconstruction pass (from metadata): %s", metadataInfo.get("RecoPassName"));
+            lCalibObjects = ccdb->getSpecificForRun<TList>(ccdbConfig.ccdbPath, mRunNumber, metadata);
           } else {
             std::map<std::string, std::string> metadata;
             metadata["RecoPassName"] = ccdbConfig.reconstructionPass.value;
-            lCalibObjects = ccdb->getSpecific<TList>(ccdbConfig.ccdbPath, bc.timestamp(), metadata);
+            LOGF(info, "Loading CCDB for reconstruction pass (from provided argument): %s", ccdbConfig.reconstructionPass.value);
+            lCalibObjects = ccdb->getSpecificForRun<TList>(ccdbConfig.ccdbPath, mRunNumber, metadata);
           }
 
           if (lCalibObjects) {
@@ -564,12 +565,13 @@ struct MultiplicityTable {
               }
             }
 
-            int bcNumber = bc.globalBC() % 3564;
-
             tableExtra(collision.numContrib(), collision.chi2(), collision.collisionTimeRes(),
                        mRunNumber, collision.posZ(), collision.sel8(),
                        nHasITS, nHasTPC, nHasTOF, nHasTRD, nITSonly, nTPConly, nITSTPC,
-                       nAllTracksTPCOnly, nAllTracksITSTPC, collision.trackOccupancyInTimeRange());
+                       nAllTracksTPCOnly, nAllTracksITSTPC,
+                       collision.trackOccupancyInTimeRange(),
+                       collision.ft0cOccupancyInTimeRange(),
+                       collision.flags());
           } break;
           case kMultSelections: // Multiplicity selections
           {
@@ -669,7 +671,7 @@ struct MultiplicityTable {
 
   void processMC2Mults(soa::Join<aod::McCollisionLabels, aod::Collisions>::iterator const& collision)
   {
-    tableExtraMc2Mults(collision.mcCollisionId()); // interlink
+    tableExtraMult2MCExtras(collision.mcCollisionId()); // interlink
   }
 
   Configurable<float> min_pt_globaltrack{"min_pt_globaltrack", 0.15, "min. pT for global tracks"};

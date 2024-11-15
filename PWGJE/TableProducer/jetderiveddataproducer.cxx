@@ -72,6 +72,7 @@ struct JetDerivedDataProducerTask {
   Produces<aod::JMcCollisionPIs> jMcCollisionsParentIndexTable;
   Produces<aod::JTracks> jTracksTable;
   Produces<aod::JTrackExtras> jTracksExtraTable;
+  Produces<aod::JEMCTracks> jTracksEMCalTable;
   Produces<aod::JTrackPIs> jTracksParentIndexTable;
   Produces<aod::JMcTrackLbs> jMcTracksLabelTable;
   Produces<aod::JMcParticles> jMcParticlesTable;
@@ -230,8 +231,8 @@ struct JetDerivedDataProducerTask {
     jTracksTable(track.collisionId(), track.pt(), track.eta(), track.phi(), jetderiveddatautilities::setTrackSelectionBit(track, track.dcaZ(), dcaZMax));
     auto trackParCov = getTrackParCov(track);
     auto xyzTrack = trackParCov.getXYZGlo();
-    float sigmaDCAXYZ;
-    float dcaXYZ = getDcaXYZ(track, &sigmaDCAXYZ);
+    float sigmaDCAXYZ2;
+    float dcaXYZ = getDcaXYZ(track, &sigmaDCAXYZ2);
     float dcaX = -99.0;
     float dcaY = -99.0;
     if (track.collisionId() >= 0) {
@@ -240,7 +241,7 @@ struct JetDerivedDataProducerTask {
       dcaY = xyzTrack.Y() - collision.posY();
     }
 
-    jTracksExtraTable(dcaX, dcaY, track.dcaZ(), track.dcaXY(), dcaXYZ, std::sqrt(track.sigmaDcaZ2()), std::sqrt(track.sigmaDcaXY2()), sigmaDCAXYZ, track.sigma1Pt()); // why is this getSigmaZY
+    jTracksExtraTable(dcaX, dcaY, track.dcaZ(), track.dcaXY(), dcaXYZ, std::sqrt(track.sigmaDcaZ2()), std::sqrt(track.sigmaDcaXY2()), std::sqrt(sigmaDCAXYZ2), track.sigma1Pt()); // why is this getSigmaZY
     jTracksParentIndexTable(track.globalIndex());
     trackCollisionMapping[{track.globalIndex(), track.collisionId()}] = jTracksTable.lastIndex();
   }
@@ -257,9 +258,9 @@ struct JetDerivedDataProducerTask {
           jTracksTable(collision.globalIndex(), track.pt(), track.eta(), track.phi(), jetderiveddatautilities::setTrackSelectionBit(track, track.dcaZ(), dcaZMax));
           jTracksParentIndexTable(track.globalIndex());
           auto xyzTrack = trackParCov.getXYZGlo();
-          float sigmaDCAXYZ;
-          float dcaXYZ = getDcaXYZ(track, &sigmaDCAXYZ);
-          jTracksExtraTable(xyzTrack.X() - collision.posX(), xyzTrack.Y() - collision.posY(), track.dcaZ(), track.dcaXY(), dcaXYZ, std::sqrt(track.sigmaDcaZ2()), std::sqrt(track.sigmaDcaXY2()), sigmaDCAXYZ, track.sigma1Pt()); // why is this getSigmaZY
+          float sigmaDCAXYZ2;
+          float dcaXYZ = getDcaXYZ(track, &sigmaDCAXYZ2);
+          jTracksExtraTable(xyzTrack.X() - collision.posX(), xyzTrack.Y() - collision.posY(), track.dcaZ(), track.dcaXY(), dcaXYZ, std::sqrt(track.sigmaDcaZ2()), std::sqrt(track.sigmaDcaXY2()), std::sqrt(sigmaDCAXYZ2), track.sigma1Pt()); // why is this getSigmaZY
         } else {
           auto bc = collision.bc_as<soa::Join<aod::BCs, aod::Timestamps>>();
           initCCDB(bc, runNumber, ccdb, doprocessCollisionsRun2 ? ccdbPathGrp : ccdbPathGrpMag, lut, doprocessCollisionsRun2);
@@ -343,7 +344,7 @@ struct JetDerivedDataProducerTask {
   }
   PROCESS_SWITCH(JetDerivedDataProducerTask, processParticles, "produces derived parrticle table", false);
 
-  void processClusters(aod::Collision const&, aod::EMCALClusters const& clusters, aod::EMCALClusterCells const& cells, aod::Calos const&, aod::EMCALMatchedTracks const& matchedTracks, aod::Tracks const&)
+  void processClusters(aod::Collision const&, aod::EMCALClusters const& clusters, aod::EMCALClusterCells const& cells, aod::Calos const&, aod::EMCALMatchedTracks const& matchedTracks, soa::Join<aod::Tracks, aod::TracksExtra> const&)
   {
 
     for (auto cluster : clusters) {
@@ -377,6 +378,8 @@ struct JetDerivedDataProducerTask {
       for (const auto& clusterTrack : clusterTracks) {
         auto JClusterID = trackCollisionMapping.find({clusterTrack.trackId(), cluster.collisionId()}); // does EMCal use its own associator?
         clusterTrackIDs.push_back(JClusterID->second);
+        auto emcTrack = clusterTrack.track_as<soa::Join<aod::Tracks, aod::TracksExtra>>();
+        jTracksEMCalTable(JClusterID->second, emcTrack.trackEtaEmcal(), emcTrack.trackPhiEmcal());
       }
       jClustersMatchedTracksTable(clusterTrackIDs);
     }

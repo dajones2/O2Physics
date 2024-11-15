@@ -68,8 +68,16 @@ if(FastJet_FOUND)
                         SOURCES v0jetspectra.cxx
                         PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::PWGJECore O2Physics::AnalysisCore
                         COMPONENT_NAME Analysis)
+    o2physics_add_dpl_workflow(jet-v0qa
+                        SOURCES v0qa.cxx
+                        PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::PWGJECore O2Physics::AnalysisCore
+                        COMPONENT_NAME Analysis)
     o2physics_add_dpl_workflow(jet-finder-charged-qa
                         SOURCES jetfinderQA.cxx
+                        PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::PWGJECore O2Physics::AnalysisCore
+                        COMPONENT_NAME Analysis)
+    o2physics_add_dpl_workflow(jet-charged-v2
+                        SOURCES jetchargedv2.cxx
                         PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::PWGJECore O2Physics::AnalysisCore
                         COMPONENT_NAME Analysis)
     o2physics_add_dpl_workflow(jet-finder-hf-qa
@@ -175,6 +183,10 @@ if(FastJet_FOUND)
     o2physics_add_dpl_workflow(bjet-tagging-ml
                         SOURCES bjetTaggingML.cxx
                         PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::PWGJECore O2Physics::AnalysisCore O2Physics::MLCore
+                        COMPONENT_NAME Analysis)
+    o2physics_add_dpl_workflow(jet-spectra-ese
+                        SOURCES jetSpectraEseTask.cxx
+                        PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::PWGJECore O2Physics::AnalysisCore
                         COMPONENT_NAME Analysis)
 
 endif()
